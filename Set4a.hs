@@ -35,7 +35,12 @@ import Data.Array
 -- you remove the Eq a => constraint from the type!
 
 allEqual :: Eq a => [a] -> Bool
-allEqual xs = todo
+allEqual [] = True
+allEqual (x:xs) = allEqual' x xs
+
+allEqual' :: Eq a => a -> [a] -> Bool
+allEqual' _ [] = True
+allEqual' prv (x:xs) = if x /= prv then False else allEqual' x xs
 
 ------------------------------------------------------------------------------
 -- Ex 2: implement the function distinct which returns True if all
@@ -49,8 +54,13 @@ allEqual xs = todo
 --   distinct [1,1,2] ==> False
 --   distinct [1,2] ==> True
 
-distinct :: Eq a => [a] -> Bool
-distinct = todo
+distinct :: Eq a => Ord a => [a] -> Bool
+distinct [] = True
+distinct (a:arr) = distinct' a (sort arr)
+
+distinct' :: Eq a => a -> [a] -> Bool
+distinct' _ [] = True 
+distinct' v (x:xs) = if v == x then False else distinct' x xs
 
 ------------------------------------------------------------------------------
 -- Ex 3: implement the function middle that returns the middle value
@@ -63,7 +73,9 @@ distinct = todo
 --   middle 'b' 'a' 'c'  ==> 'b'
 --   middle 1 7 3        ==> 3
 
-middle = todo
+middle a b c = if a > m then m else if a < l then l else a
+               where m = max b c
+                     l = min b c
 
 ------------------------------------------------------------------------------
 -- Ex 4: return the range of an input list, that is, the difference
@@ -78,8 +90,18 @@ middle = todo
 --   rangeOf [4,2,1,3]          ==> 3
 --   rangeOf [1.5,1.0,1.1,1.2]  ==> 0.5
 
-rangeOf :: [a] -> a
-rangeOf = todo
+rangeOf :: Num a => Ord a => [a] -> a
+rangeOf arr = fst t - snd t
+              where biggest :: Num a => Ord a => a  -> a -> [a] -> (a,a)
+                    biggest big sm [] = (big, sm)
+                    biggest big sm (x:xs) = if x > big && x < sm 
+                                            then biggest x x xs
+                                            else if x > big 
+                                            then biggest x sm xs 
+                                            else if x < sm 
+                                            then biggest big x xs
+                                            else biggest big sm xs
+                    t = biggest (-10000) 100000 arr
 
 ------------------------------------------------------------------------------
 -- Ex 5: given a (non-empty) list of (non-empty) lists, return the longest
@@ -96,8 +118,16 @@ rangeOf = todo
 -- Examples:
 --   longest [[1,2,3],[4,5],[6]] ==> [1,2,3]
 --   longest ["bcd","def","ab"] ==> "bcd"
-
-longest = todo
+longest :: Ord a => [[a]] -> [a]
+longest arr = longest' r rest
+              where (r:rest) = filter (\x -> length x == maxLength) arr
+                    maxLength = maximum $ map (\x -> length x) arr
+                    
+longest' :: Ord a => [a] -> [[a]] -> [a]
+longest' v [] = v
+longest' curr (x:rest)
+                    | curr !! 0 > x !! 0 = longest' x rest
+                    | otherwise = longest' curr rest
 
 ------------------------------------------------------------------------------
 -- Ex 6: Implement the function incrementKey, that takes a list of
@@ -113,8 +143,11 @@ longest = todo
 --   incrementKey True [(True,1),(False,3),(True,4)] ==> [(True,2),(False,3),(True,5)]
 --   incrementKey 'a' [('a',3.4)] ==> [('a',4.4)]
 
-incrementKey :: k -> [(k,v)] -> [(k,v)]
-incrementKey = todo
+incrementKey :: (Eq k, Num v) => k -> [(k,v)] -> [(k,v)]
+incrementKey _ [] = []
+incrementKey key (l:lis)
+                       | key == fst l =  (fst l, snd l + 1):incrementKey key lis
+                       | otherwise = l:incrementKey key lis
 
 ------------------------------------------------------------------------------
 -- Ex 7: compute the average of a list of values of the Fractional
@@ -129,7 +162,7 @@ incrementKey = todo
 -- length to a Fractional
 
 average :: Fractional a => [a] -> a
-average xs = todo
+average xs = foldr (\x acc -> x + acc) 0 xs / fromIntegral (length xs)
 
 ------------------------------------------------------------------------------
 -- Ex 8: given a map from player name to score and two players, return
@@ -148,7 +181,9 @@ average xs = todo
 --     ==> "Lisa"
 
 winner :: Map.Map String Int -> String -> String -> String
-winner scores player1 player2 = todo
+winner scores player1 player2 = if scoreOne < scoreTwo then player2 else player1
+                                where scoreOne = Map.findWithDefault 0 player1 scores
+                                      scoreTwo = Map.findWithDefault 0 player2 scores
 
 ------------------------------------------------------------------------------
 -- Ex 9: compute how many times each value in the list occurs. Return
@@ -163,7 +198,7 @@ winner scores player1 player2 = todo
 --     ==> Map.fromList [(False,3),(True,1)]
 
 freqs :: (Eq a, Ord a) => [a] -> Map.Map a Int
-freqs xs = todo
+freqs xs = foldr (\x acc -> Map.alter (\v -> Just $ maybe 1 (+1) v ) x acc) Map.empty xs
 
 ------------------------------------------------------------------------------
 -- Ex 10: recall the withdraw example from the course material. Write a
@@ -191,8 +226,22 @@ freqs xs = todo
 --     ==> fromList [("Bob",100),("Mike",50)]
 
 transfer :: String -> String -> Int -> Map.Map String Int -> Map.Map String Int
-transfer from to amount bank = todo
+transfer from to amount bank = if Map.notMember from bank || Map.notMember to bank || amount < 0
+                               then bank
+                               else if balance < amount
+                               then bank
+                               else Map.insert from (balance - amount) (Map.insert to (bal2 + amount) bank)
+                               where (Just balance) = Map.lookup from bank
+                                     (Just bal2) = Map.lookup to bank
 
+
+-- transfer :: String -> String -> Int -> Map.Map String Int -> Map.Map String Int
+-- transfer from to amount bank =
+--   case (Map.lookup from bank, Map.lookup to bank) of
+--     (Just balance, Just bal2)
+--       | balance >= amount && amount >= 0 ->
+--           Map.adjust (\x -> x - amount) from $ Map.adjust (+ amount) to bank
+--     _ -> bank
 ------------------------------------------------------------------------------
 -- Ex 11: given an Array and two indices, swap the elements in the indices.
 --
